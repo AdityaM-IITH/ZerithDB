@@ -9,6 +9,9 @@ import { lintCommand } from "./commands/lint.js";
 import { formatCommand } from "./commands/format.js";
 import { maintenanceCommand } from "./commands/maintenance.js";
 import { purgeCommand } from "./purge.js";
+import { generateCommand } from "./commands/generate.js";
+import { inferCommand } from "./commands/infer.js";
+import { migrateCommand } from "./commands/migrate.js";
 
 import { checkConnectivity } from "./checkConnectivity.js";
 
@@ -55,23 +58,12 @@ async function main() {
     .option("-p, --port <port>", "Port to listen on", "4000")
     .action(signalCommand);
 
-  // LINT
   program
-    .command("lint [schema-path]")
-    .description("Lint the db schema for anti-patterns and missing indexes")
-    .action(lintCommand);
-
-  // FORMAT
-  program
-    .command("format [schema-path]")
-    .description("Format the db schema using Prettier")
-    .action(formatCommand);
-
-  // MAINTENANCE
-  program
-    .command("maintenance <status>")
-    .description("Toggle maintenance mode for the signaling server (on/off)")
-    .action(maintenanceCommand);
+    .command("generate")
+    .description("Generate ZerithDB validation schemas from a Prisma schema")
+    .option("-s, --schema <schema>", "Path to schema.prisma file", "./prisma/schema.prisma")
+    .option("-o, --out <out>", "Path to output generated TypeScript file", "./src/zerith-schemas.ts")
+    .action(generateCommand);
 
   // PURGE
   program
@@ -79,11 +71,30 @@ async function main() {
     .description("Purge all local ZerithDB data stored in the home directory")
     .action(purgeCommand);
 
+  program
+    .command("infer <path>")
+    .description("Scan JSON and infer TypeScript & Zod schemas")
+    .option("--out <dir>", "Output directory")
+    .option("--name <schemaName>", "Schema name")
+    .option("--zod-only", "Generate only Zod schemas")
+    .option("--ts-only", "Generate only TypeScript interfaces")
+    .option("--pretty", "Format output with Prettier")
+    .action(inferCommand);
+
+  program
+    .command("migrate <source>")
+    .description("Migrate database schema and records from legacy providers to ZerithDB local-first format")
+    .option("-u, --url <url>", "Supabase URL / Firebase Project URL")
+    .option("-k, --key <key>", "Supabase API key / service key")
+    .option("-t, --table <tables>", "Specific table(s) to migrate, comma-separated")
+    .option("-a, --app <appId>", "ZerithDB App ID to embed in snapshot", "zerithdb-migrated-app")
+    .option("-o, --output <output>", "Output JSON file path", "zerithdb-migration-payload.json")
+    .action(migrateCommand);
+
   program.parse(process.argv);
 }
 
 main().catch((err) => {
-
   console.error(chalk.red("\nUnexpected CLI error"));
 
   if (err instanceof Error) {
