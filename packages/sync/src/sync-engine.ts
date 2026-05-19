@@ -35,6 +35,7 @@ export class SyncEngine extends EventEmitter<SyncEvents> {
   private pendingUpdates = new Map<string, Uint8Array[]>();
   private syncTimer: any = null;
   private syncTimerIsRaf: boolean = false;
+  private antiEntropyTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly config: ZerithDBConfig,
@@ -100,10 +101,17 @@ export class SyncEngine extends EventEmitter<SyncEvents> {
   /** Disable sync without disconnecting from peers */
   disable(): void {
     this._enabled = false;
+
     this.network.off("message", this.onPeerUpdate);
     this.network.off("peer:connected", this.onPeerConnected);
     this.network.off("peer:disconnected", this.onPeerDisconnected);
     this.ephemeral.disable();
+
+    if (this.antiEntropyTimer) {
+      clearInterval(this.antiEntropyTimer);
+      this.antiEntropyTimer = null;
+    }
+
     this.updateState({ synced: false, connectedPeers: 0 });
   }
 
